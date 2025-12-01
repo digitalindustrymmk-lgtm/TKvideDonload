@@ -49,7 +49,7 @@ def echo_all(message):
     
     # ពិនិត្យមើលថាជា link TikTok ឬអត់
     if "tiktok.com" in text:
-        msg = bot.reply_to(message, "កំពុងដំណើរការ... សូមរង់ចាំបន្តិច ⏳")
+        msg = bot.reply_to(message, "កំពុងដំណើរការ Download ជូនអ្នកដោយគ្មាន Watermark... សូមរង់ចាំបន្តិច ⏳")
         
         try:
             # ទាញយកវីដេអូ
