@@ -57,7 +57,7 @@ def echo_all(message):
             
             # ផ្ញើវីដេអូទៅកាន់អ្នកប្រើប្រាស់
             with open(video_path, 'rb') as video:
-                bot.send_video(message.chat.id, video, caption="នេះគឺជាវីដេអូរបស់អ្នក! \nទាញយកដោយ: @YourBotName", reply_to_message_id=message.message_id)
+                bot.send_video(message.chat.id, video, caption="នេះគឺជាវីដេអូរបស់អ្នក! \nទាញយកដោយ: @ITSUPPORTDI", reply_to_message_id=message.message_id)
             
             # លុប file ចេញពី Server ដើម្បីកុំឱ្យពេញ Space
             os.remove(video_path)
