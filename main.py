@@ -7,7 +7,7 @@ from threading import Thread
 
 # --- CONFIGURATION ---
 # ដាក់ Token ថ្មីរបស់អ្នកនៅទីនេះ (ឬប្រើ Environment Variable លើ Render)
-BOT_TOKEN = os.environ.get('BOT_TOKEN', '8322086006:AAFF2-CuOWMNRcG3AYuhatKWSb5yVCOaFso')
+BOT_TOKEN = os.environ.get('BOT_TOKEN', '8322086006:AAFScNAWiukoQlMChoBv8jW76qh380sl62g')
 
 bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask('')
