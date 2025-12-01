@@ -123,7 +123,7 @@ def echo_all(message):
                 title = info.get('title', 'TikTok Video')
             
             with open(filename, 'rb') as video:
-                caption_text = f"🎬 <b>{title}</b>\n\n✅ Downloaded by @YourBotName"
+                caption_text = f"🎬 <b>{title}</b>"
                 bot.send_video(message.chat.id, video, caption=caption_text, parse_mode="HTML", reply_to_message_id=message.message_id)
             
             os.remove(filename)
