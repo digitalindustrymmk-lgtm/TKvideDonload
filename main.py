@@ -97,7 +97,7 @@ def echo_all(message):
                 filename = ydl.prepare_filename(info)
             
             with open(filename, 'rb') as video:
-                bot.send_video(message.chat.id, video, caption="សម្រេច! \n@YourBotName")
+                bot.send_video(message.chat.id, video, caption="នេះជាវីដេអូរបស់អ្នក! \n@ក្រុមការងារITSUPPORTDI")
             
             os.remove(filename)
             bot.delete_message(message.chat.id, msg.message_id)
