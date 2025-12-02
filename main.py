@@ -9,19 +9,16 @@ from firebase_admin import credentials
 from firebase_admin import db
 
 # --- ១. CONFIGURATION ---
-BOT_TOKEN = os.environ.get('BOT_TOKEN', '8322086006:AAFScNAWiukoQlMChoBv8jW76qh380sl62g')
+BOT_TOKEN = os.environ.get('BOT_TOKEN', '8322086006:AAFF2-CuOWMNRcG3AYuhatKWSb5yVCOaFso')
 
-# --- ២. FIREBASE SETUP (កែសម្រួលថ្មី) ---
-# យើងបង្កើតមុខងារដើម្បីស្វែងរក Key ទាំងក្នុង Folder ធម្មតា និងក្នុង Secret Folder របស់ Render
+# --- ២. FIREBASE SETUP ---
 def get_firebase_key_path():
-    # ជម្រើសទី ១: រកមើលក្នុង Folder ធម្មតា (សម្រាប់ពេល test លើកុំព្យូទ័រ)
+    # រកមើលក្នុង Folder ធម្មតា
     if os.path.exists("serviceAccountKey.json"):
         return "serviceAccountKey.json"
-    
-    # ជម្រើសទី ២: រកមើលក្នុង Secret Folder របស់ Render (កន្លែងដែលអ្នកទើបតែដាក់)
+    # រកមើលក្នុង Secret Folder របស់ Render
     elif os.path.exists("/etc/secrets/serviceAccountKey.json"):
         return "/etc/secrets/serviceAccountKey.json"
-    
     return None
 
 key_path = get_firebase_key_path()
@@ -31,14 +28,14 @@ if key_path:
         cred = credentials.Certificate(key_path)
         if not firebase_admin._apps:
             firebase_admin.initialize_app(cred, {
-                # ត្រូវប្រាកដថា Link នេះត្រូវនឹង Firebase របស់អ្នក
+                # ជំនួស Link Database របស់អ្នកនៅទីនេះ
                 'databaseURL': 'https://botdonwloadvideotk-default-rtdb.firebaseio.com/'
             })
         print(f"Firebase Connected using key at: {key_path}")
     except Exception as e:
         print(f"Firebase Init Error: {e}")
 else:
-    print("WARNING: Key not found in root or /etc/secrets/")
+    print("WARNING: Key not found. Database features will be disabled.")
 
 bot = telebot.TeleBot(BOT_TOKEN)
 app = Flask('')
@@ -55,50 +52,64 @@ def keep_alive():
     t = Thread(target=run_http)
     t.start()
 
-# --- ៤. SAVE USER FUNCTION ---
+# --- ៤. SAVE USER & HISTORY FUNCTIONS (Silent Mode) ---
+
 def save_user_to_db(message):
-    # ហៅមុខងារស្វែងរក Key ម្តងទៀត
-    current_key_path = get_firebase_key_path()
-    
-    if not current_key_path:
-        bot.reply_to(message, "⚠️ <b>Admin Warning:</b> រកមិនឃើញ file <code>serviceAccountKey.json</code> ទេ។ \nRender Path Checked: <code>/etc/secrets/serviceAccountKey.json</code>", parse_mode="HTML")
-        return
+    """ Save User info ស្ងាត់ៗ មិនប្រាប់ User ទេ """
+    if not get_firebase_key_path(): return
 
     try:
         user_id = str(message.from_user.id)
-        first_name = message.from_user.first_name
-        username = message.from_user.username
-        
-        if username:
-            telegram_link = f"https://t.me/{username}"
-        else:
-            telegram_link = "No Username"
-
         user_data = {
             'id': user_id,
-            'first_name': first_name,
-            'username': username if username else "None",
-            'telegram_link': telegram_link,
-            'joined_at': time.strftime('%Y-%m-%d %H:%M:%S'),
+            'first_name': message.from_user.first_name,
+            'username': message.from_user.username if message.from_user.username else "None",
+            'telegram_link': f"https://t.me/{message.from_user.username}" if message.from_user.username else "No Username",
             'last_active': time.strftime('%Y-%m-%d %H:%M:%S')
         }
-
+        
+        # ប្រើ update ដើម្បីកុំឱ្យបាត់ប្រវត្តិ history ចាស់
         ref = db.reference(f'users/{user_id}')
-        ref.set(user_data)
-        print(f"Saved user: {first_name}")
+        ref.update(user_data)
+        
+        # Print ក្នុង Log របស់ Render ដើម្បីឱ្យ Admin ដឹង (User មិនឃើញទេ)
+        print(f"Silent Save: User {message.from_user.first_name} updated.")
         
     except Exception as e:
-        bot.reply_to(message, f"❌ <b>Database Error:</b>\n<code>{str(e)}</code>", parse_mode="HTML")
+        # បើ Error គ្រាន់តែ Print ទុកក្នុង Log មិនបាច់ប្រាប់ User
+        print(f"Error saving user: {e}")
+
+def save_download_history(message, video_url, video_title):
+    """ Save History ស្ងាត់ៗ """
+    if not get_firebase_key_path(): return
+
+    try:
+        user_id = str(message.from_user.id)
+        
+        history_data = {
+            'url': video_url,
+            'title': video_title,
+            'downloaded_at': time.strftime('%Y-%m-%d %H:%M:%S')
+        }
+
+        # Save ចូលក្នុង Node "history"
+        ref = db.reference(f'users/{user_id}/history')
+        ref.push(history_data)
+        print(f"Silent Save: History for {user_id} added.")
+
+    except Exception as e:
+        print(f"Error saving history: {e}")
 
 # --- ៥. BOT HANDLERS ---
+
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
+    # Save ស្ងាត់ៗ
     save_user_to_db(message)
     
     welcome_text = (
         f"សួស្តី <b>{message.from_user.first_name}</b>! 👋\n\n"
-        "ខ្ញុំគឺជា Bot សម្រាប់ Download វីដេអូ TikTok ដោយគ្មាន Watermark។\n"
-        "គ្រាន់តែផ្ញើ Link TikTok មកខ្ញុំ ខ្ញុំនឹងធ្វើការជូនអ្នកភ្លាមៗ! 🚀"
+        "ផ្ញើ Link TikTok មកខ្ញុំ ខ្ញុំនឹង Download ជូនអ្នក។ 🚀"
     )
     bot.reply_to(message, welcome_text, parse_mode="HTML")
 
@@ -106,7 +117,11 @@ def send_welcome(message):
 def echo_all(message):
     text = message.text
     
+    # Save User ស្ងាត់ៗ (ដើម្បី Update last_active)
+    save_user_to_db(message)
+
     if "tiktok.com" in text:
+        # សារជូនដំណឹងធម្មតា (លែងមានពាក្យថា Database ទៀតហើយ)
         status_msg = bot.reply_to(message, "⏳ កំពុងដំណើរការ... សូមរង់ចាំបន្តិច...")
         
         try:
@@ -122,6 +137,10 @@ def echo_all(message):
                 filename = ydl.prepare_filename(info)
                 title = info.get('title', 'TikTok Video')
             
+            # Save History ស្ងាត់ៗ
+            save_download_history(message, text, title)
+
+            # ផ្ញើវីដេអូ
             with open(filename, 'rb') as video:
                 caption_text = f"🎬 <b>{title}</b>"
                 bot.send_video(message.chat.id, video, caption=caption_text, parse_mode="HTML", reply_to_message_id=message.message_id)
@@ -131,7 +150,7 @@ def echo_all(message):
             
         except Exception as e:
             bot.delete_message(message.chat.id, status_msg.message_id)
-            bot.reply_to(message, f"❌ មានបញ្ហាក្នុងការ Download។\nError: {str(e)}")
+            bot.reply_to(message, f"❌ Download បរាជ័យ។\nError: {str(e)}")
             if 'filename' in locals() and os.path.exists(filename):
                 os.remove(filename)
     else:
